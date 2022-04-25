@@ -1,0 +1,165 @@
+Install Kubernetes Cluster using kubeadm
+Follow this documentation to set up a Kubernetes cluster on Ubuntu 20.04 LTS.
+
+This documentation guides you in setting up a cluster with one master node and one worker node.
+
+Assumptions
+Role	FQDN	IP	OS	RAM	CPU
+Master	kmaster.example.com	172.16.16.100	Ubuntu 20.04	2G	2
+Worker	kworker.example.com	172.16.16.101	Ubuntu 20.04	1G	1
+On both Kmaster and Kworker
+Login as root user
+sudo su -
+Perform all the commands as root user unless otherwise specified
+
+Disable Firewall
+ufw disable
+Disable swap
+swapoff -a; sed -i '/swap/d' /etc/fstab
+Update sysctl settings for Kubernetes networking
+cat >>/etc/sysctl.d/kubernetes.conf<<EOF
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sysctl --system
+Install docker engine
+{
+  apt install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
+  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+  add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  apt update
+  apt install -y docker-ce=5:19.03.10~3-0~ubuntu-focal containerd.io
+}
+Kubernetes Setup
+Add Apt repository
+{
+  curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+  echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" > /etc/apt/sources.list.d/kubernetes.list
+}
+Install Kubernetes components
+apt update && apt install -y kubeadm=1.18.5-00 kubelet=1.18.5-00 kubectl=1.18.5-00
+In case you are using LXC containers for Kubernetes nodes
+Hack required to provision K8s v1.15+ in LXC containers
+
+{
+  mknod /dev/kmsg c 1 11
+  echo '#!/bin/sh -e' >> /etc/rc.local
+  echo 'mknod /dev/kmsg c 1 11' >> /etc/rc.local
+  chmod +x /etc/rc.local
+}
+On kmaster
+Initialize Kubernetes Cluster
+Update the below command with the ip address of kmaster
+
+kubeadm init --apiserver-advertise-address=103.92.24.32 --pod-network-cidr=10.100.0.0/16  --ignore-preflight-errors=all
+Deploy Calico network
+kubectl --kubeconfig=/etc/kubernetes/admin.conf create -f https://docs.projectcalico.org/v3.14/manifests/calico.yaml
+Cluster join command
+kubeadm token create --print-join-command
+To be able to run kubectl commands as non-root user
+If you want to be able to run kubectl commands as non-root user, then as a non-root user perform these
+
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+On Kworker
+Join the cluster
+Use the output from kubeadm token create command in previous step from the master server and run here.
+
+Verifying the cluster (On kmaster)
+Get Nodes status
+kubectl get nodes
+Get component status
+kubectl get cs
+systemctl daemon-reload
+systemctl restart kubelet
+
+=========================
+kubectl cluster-info
+check status node:
+kubectl describe node tlinkvn-2433-k8s-node2
+check all node:
+kubectl get node -A
+kubectl get node -o wide
+kubectl get pods --all-namespaces
+kubectl api-resources
+kubectl get po/nginxapp -o yam => xem manifests cua pod
+
+kubectl proxy => curl 127.0.0.1:8001/api/v1/namespaces/default/pods/nginxapp/proxy (/api/v1/namespaces/default/pods/nginxapp => selfLink trong manifests)
+
+kubectl [command] [TYPE] [NAME] [flags]
+Trong đó:
+
+[command] là lệnh, hành động như apply, get, delete, describe ...
+[TYPE] kiểu tài nguyên như ns, no, po, svc ...
+[NAME] tên đối tượng lệnh tác động
+[flags] các thiết lập, tùy thuộc loại lệnh
+Cách lệnh làm việc với POD ở phần này:
+===========
+####replicaset###
+watch -n 1 kubectl get all -o wide
+kubectl describe rs/rsapp ==> kiem tra thong tin replicaset 
+Thực hiện lệnh để triển khai/cập nhật
+
+kubectl apply -f 2.rs.yaml
+Liệt kê các POD có nhãn "app=rsapp"
+
+kubectl get po -l "app=rsapp"
+Xoa nhan cua pod
+kubectl label pod/rsapp-fvgmf app-
+Xoa replicaset
+kubectl delete rs rsapp ==> pod cung xoa theo
+kubectl get hpa -o wide => lay thong tin hpa
+####deployment####
+Deployment quản lý một nhóm các Pod - các Pod được nhân bản, nó tự động thay thế các Pod bị lỗi, không phản hồi bằng pod mới nó tạo ra. 
+Như vậy, deployment đảm bảo ứng dụng của bạn có một (hay nhiều) Pod để phục vụ các yêu cầu.
+Deployment sử dụng mẫu Pod (Pod template - chứa định nghĩa / thiết lập về Pod) để tạo các Pod (các nhân bản replica), 
+khi template này thay đổi, các Pod mới sẽ được tạo để thay thế Pod cũ ngay lập tức.
+
+Khi Deployment tạo ra, tên của nó là deployapp, có thể kiểm tra với lệnh:
+
+kubectl get deploy -o wide
+Deploy này quản sinh ra một ReplicasSet và quản lý nó, gõ lệnh sau để hiện thị các ReplicaSet
+
+kubectl get rs -o wide
+
+Đến lượt ReplicaSet do Deploy quản lý lại thực hiện quản lý (tạo, xóa) các Pod, để xem các Pod
+
+kubeclt get po -o wide
+
+# Hoặc lọc cả label
+kubectl get po -l "app=deployapp" -o wide
+Cập nhật Deployment
+Bạn có thể cập một Deployment bằng cách sử đổi mẫu (template) của Pod, khi template cập nhật thì nó tự động triển khai ra các Pod. (sửa file yaml rồi cập nhật với kubectl apply -f ... hoặc biên tập trực tiếp với lệnh kubectl edit deploy/namedeploy)
+
+Khi một Deployment được cập nhật, thì Deployment dừng lại các Pod, scale lại số lượng Pod về 0, sau đó sử dụng template mới của Pod để tạo lại Pod, Pod cũ không xóa hẳng cho đến khi Pod mới đang chạy, quá trình này diễn ra đến đâu có thể xem bằng lệnh kubectl describe deploy/namedeploy. Cập nhật như vậy nó đảm bảo luôn có Pod đang chạy khi đang cập nhật.
+
+Có thể thu hồi lại bản cập nhật bằng cách sử dụng lệnh kubectl rollout undo
+
+kubectl rollout history deploy/deployapp --revision=1 => xem lich su cap nhat deploy
+Scale Deployment
+Scale thay đổi chỉ số replica (số lượng POD) của Deployment, ý nghĩa tương tự như scale đối với ReplicaSet trong phần trước. Ví dụ để scale với 10 POD thực hiện lệnh:
+
+kubectl scale deploy/deployapp --replicas=10
+Muốn thiết lập scale tự động với số lượng POD trong khoảng min, max và thực hiện scale khi CPU của POD hoạt động ở mức 50% thì thực hiện
+
+kubectl autoscale deploy/deployapp --min=2 --max=5 --cpu-percent=50
+Bạn cũng có thể triển khai Scale từ khai báo trong một yaml. Hoặc có thể trích xuất scale ra để chỉnh sửa
+
+kubectl get hpa/deployapp -o yaml > 2.hpa.yaml
+####replicaset####
+kubeclt create -f replicaset.yml
+kubeclt get replicaset
+kubeclt replace -f replicaset.yml
+kubeclt scale --replicas=6 -f replicaset.yml
+kubectl scale --replicas=6 replicaset(TYPE) myapp-replicaset(NAME-ReplicaSet)
+####rollout#####
+kubectl set image deployment/my-deployment mycontainer=myimage:latest
+kubeclt rollout undo deployment/my-deployment
+
+docker run -it -d --name clickcounter -p8085:5000 --link=redis kodekloud/click-counter
+
+kubectl kustomize <kustomization_directory>
+To apply those Resources, run kubectl apply with --kustomize or -k flag:
+
+kubectl apply -k <kustomization_directory> ==> kubectl apply -k /root/exams/voting-app/
