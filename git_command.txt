@@ -208,3 +208,4 @@ $git commit --amend -m "noi dung commit"
 Cập nhật nội dung commit vào commit cuối (không tạo ra thêm commit)
 .gitignore 
 tạo file .gitignore cùng gốc với thư mục code, thêm đuôi file cần bỏ qua vào gitignore để không bị commit
+sssssssssssssssss
