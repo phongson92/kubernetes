@@ -44,10 +44,14 @@ Dùng để hiển thị tất cả các branch đang có.
 $git restore file-name
 Dùng để phục hồi lại fle đã bị xóa khi đã commit
  $git restore --staged file-name
+<<<<<<< HEAD
  xóa file đã commit ra khỏi staged
  $git checkout -- file-name
  Phục hồi nội dung từ commit cuối
 $git reset --soft HEAD~1 ==> Dùng để xóa commit cuối cùng
+=======
+$git reset --soft HEAD~1 ==> Dùng để xóa file ở trạng thái stage
+>>>>>>> 93b5d696e31a2bca387cdd0429d9fb9edc747565
 $ git branch <name_branch>
 Dùng để tạo một branch mới.
 
