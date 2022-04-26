@@ -1,3 +1,0 @@
-noi dung newbranch
-noi dung nay dc them moi main branch
-noi dung nay dc them boi newbranch
