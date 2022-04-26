@@ -41,12 +41,10 @@ Các lệnh branch các bạn có thể sử dụng:
 
 $ git branch
 Dùng để hiển thị tất cả các branch đang có.
-
+$git restore file-name
+Dùng để phục hồi lại fle đã bị xóa khi đã commit
  $git restore --staged file-name
-Dùng để commit lại message khi commit sai nội dung trước đó
 $git reset --soft HEAD~1 ==> Dùng để xóa file ở trạng thái stage
-
-
 $ git branch <name_branch>
 Dùng để tạo một branch mới.
 
