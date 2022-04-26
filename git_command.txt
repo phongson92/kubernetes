@@ -165,7 +165,7 @@ $ git blame <your_file_name
 git tag
 Trong Git, các thẻ tag rất hữu ích và bạn có thể sử dụng chúng để quản lý bản phát hành. Bạn có thể coi thẻ Git giống như một nhánh sẽ không thay đổi. Nó quan trọng hơn đáng kể nếu bạn đang phát hành công khai.
 
-$ git tag -a v1.0.0
+$ git tag -a "v1.0.0" -m "noi dung phien ban" ma-commit
 git verify-commit
 Lệnh git verify-commit sẽ kiểm tra chữ ký gpg. GPG hoặc “GNU Privacy Guard” là công cụ được sử dụng trong các tệp ký tên và chứa các chữ ký của chúng.
 
@@ -208,4 +208,3 @@ $git commit --amend -m "noi dung commit"
 Cập nhật nội dung commit vào commit cuối (không tạo ra thêm commit)
 .gitignore 
 tạo file .gitignore cùng gốc với thư mục code, thêm đuôi file cần bỏ qua vào gitignore để không bị commit
-sssssssssssssssss
